@@ -62,22 +62,22 @@ class Label(displayio.Group):
     # This has a lot of getters/setters, maybe it needs cleanup.
 
     def __init__(
-        self,
-        font,
-        *,
-        x=0,
-        y=0,
-        text="",
-        max_glyphs=None,
-        color=0xFFFFFF,
-        background_color=None,
-        line_spacing=1.25,
-        background_tight=False,
-        padding_top=0,
-        padding_bottom=0,
-        padding_left=0,
-        padding_right=0,
-        **kwargs
+            self,
+            font,
+            *,
+            x=0,
+            y=0,
+            text="",
+            max_glyphs=None,
+            color=0xFFFFFF,
+            background_color=None,
+            line_spacing=1.25,
+            background_tight=False,
+            padding_top=0,
+            padding_bottom=0,
+            padding_left=0,
+            padding_right=0,
+            **kwargs
     ):
         if "scale" in kwargs.keys():
             self._scale = kwargs["scale"]
@@ -89,6 +89,7 @@ class Label(displayio.Group):
             max_glyphs = len(text)
         # add one to max_size for the background bitmap tileGrid
         super().__init__(max_size=max_glyphs + 1, **kwargs)
+        print("max_size={}".format(max_glyphs + 1))
 
         self.width = max_glyphs
         self._font = font
@@ -112,11 +113,15 @@ class Label(displayio.Group):
 
         self._background_color = background_color
         self._background_palette = displayio.Palette(1)
-        self.append(
-            displayio.TileGrid(
-                displayio.Bitmap(0, 0, 1), pixel_shader=self._background_palette
-            )
-        )  # initialize with a blank tilegrid placeholder for background
+        self._added_background_tilegrid = False
+        if self._background_color:
+            print("adding background tilegrid from init")
+            self.append(
+                displayio.TileGrid(
+                    displayio.Bitmap(1, 1, 1), pixel_shader=self._background_palette
+                )
+            )  # initialize with a blank tilegrid placeholder for background
+            self._added_background_tilegrid = True
 
         self._padding_top = padding_top
         self._padding_bottom = padding_bottom
@@ -153,14 +158,14 @@ class Label(displayio.Group):
             box_width = self._boundingbox[2] + self._padding_left + self._padding_right
             x_box_offset = -self._padding_left
             box_height = (
-                (ascender_max + descender_max)
-                + int((lines - 1) * self.height * self._line_spacing)
-                + self._padding_top
-                + self._padding_bottom
+                    (ascender_max + descender_max)
+                    + int((lines - 1) * self.height * self._line_spacing)
+                    + self._padding_top
+                    + self._padding_bottom
             )
             y_box_offset = -ascender_max + y_offset - self._padding_top
 
-        self._update_background_color(self._background_color)
+        # self._update_background_color(self._background_color)
         box_width = max(0, box_width)  # remove any negative values
         box_height = max(0, box_height)  # remove any negative values
 
@@ -171,27 +176,47 @@ class Label(displayio.Group):
             x=left + x_box_offset,
             y=y_box_offset,
         )
-
         return tile_grid
 
     def _update_background_color(self, new_color):
 
         if new_color is None:
+            print("setting {} transparent".format(self._background_palette[0]))
             self._background_palette.make_transparent(0)
         else:
             self._background_palette.make_opaque(0)
             self._background_palette[0] = new_color
         self._background_color = new_color
 
+        y_offset = int(
+            (
+                    self._font.get_glyph(ord("M")).height
+                    - self.text.count("\n") * self.height * self.line_spacing
+            )
+            / 2
+        )
+        lines = self.text.count("\n") + 1
+        if not self._added_background_tilegrid:
+
+            self._added_background_tilegrid = True
+            print("adding background tilegrid in update background color")
+            print("len self = {}".format(len(self)))
+            self.insert(0, self._create_background_box(lines, y_offset))
+        else:
+            self[0] = self._create_background_box(lines, y_offset)
+
     def _update_text(self, new_text):  # pylint: disable=too-many-locals
         x = 0
         y = 0
-        i = 1
+        if self._added_background_tilegrid:
+            i = 1
+        else:
+            i = 0
         old_c = 0
         y_offset = int(
             (
-                self._font.get_glyph(ord("M")).height
-                - new_text.count("\n") * self.height * self.line_spacing
+                    self._font.get_glyph(ord("M")).height
+                    - new_text.count("\n") * self.height * self.line_spacing
             )
             / 2
         )
@@ -213,9 +238,9 @@ class Label(displayio.Group):
             position_y = y - glyph.height - glyph.dy + y_offset
             position_x = x + glyph.dx
             if (
-                not self._text
-                or old_c >= len(self._text)
-                or character != self._text[old_c]
+                    not self._text
+                    or old_c >= len(self._text)
+                    or character != self._text[old_c]
             ):
                 try:
                     # pylint: disable=unexpected-keyword-arg
@@ -240,6 +265,7 @@ class Label(displayio.Group):
                 if i < len(self):
                     self[i] = face
                 else:
+                    print("appending face")
                     self.append(face)
             elif self._text and character == self._text[old_c]:
 
@@ -255,12 +281,12 @@ class Label(displayio.Group):
             old_c += 1
             # skip all non-printables in the old string
             while (
-                self._text
-                and old_c < len(self._text)
-                and (
-                    self._text[old_c] == "\n"
-                    or not self._font.get_glyph(ord(self._text[old_c]))
-                )
+                    self._text
+                    and old_c < len(self._text)
+                    and (
+                            self._text[old_c] == "\n"
+                            or not self._font.get_glyph(ord(self._text[old_c]))
+                    )
             ):
                 old_c += 1
         # Remove the rest
@@ -268,7 +294,16 @@ class Label(displayio.Group):
             self.pop()
         self._text = new_text
         self._boundingbox = (left, top, left + right, bottom - top)
-        self[0] = self._create_background_box(lines, y_offset)
+        print("bg color: {}".format(self._background_color))
+        if self._background_color and len(new_text) + self._padding_left + self._padding_right > 0:
+            if not self._added_background_tilegrid:
+
+                self._added_background_tilegrid = True
+                print("adding background tilegrid")
+                print("len self = {}".format(len(self)))
+                self.insert(0, self._create_background_box(lines, y_offset))
+            else:
+                self[0] = self._create_background_box(lines, y_offset)
 
     @property
     def bounding_box(self):
@@ -351,15 +386,11 @@ class Label(displayio.Group):
         """Position relative to the anchor_point. Tuple containing x,y
            pixel coordinates."""
         return (
-            int(
-                self.x
-                + self._boundingbox[0]
-                + self._anchor_point[0] * self._boundingbox[2]
-            ),
+            int(self.x + (self._anchor_point[0] * self._boundingbox[2] * self._scale)),
             int(
                 self.y
-                + self._boundingbox[1]
-                + self._anchor_point[1] * self._boundingbox[3]
+                + (self._anchor_point[1] * self._boundingbox[3] * self._scale)
+                - round((self._boundingbox[3] * self._scale) / 2.0)
             ),
         )
 
@@ -369,10 +400,10 @@ class Label(displayio.Group):
             new_position[0]
             - self._anchor_point[0] * (self._boundingbox[2] * self._scale)
         )
-        new_y = self.y = int(
+        new_y = int(
             new_position[1]
-            - self._anchor_point[1] * (self._boundingbox[3] * self._scale)
-            + (self._boundingbox[3] * self._scale) / 2
+            - (self._anchor_point[1] * self._boundingbox[3] * self._scale)
+            + round((self._boundingbox[3] * self._scale) / 2.0)
         )
         self._boundingbox = (new_x, new_y, self._boundingbox[2], self._boundingbox[3])
         self.x = new_x
