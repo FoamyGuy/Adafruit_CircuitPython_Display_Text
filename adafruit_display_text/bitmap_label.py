@@ -118,6 +118,8 @@ class Label(LabelBase):
     ) -> None:
         # pylint: disable=too-many-branches, too-many-statements, too-many-locals
 
+        print(f"inside _reset_text. text is: {text}")
+
         # Store all the instance variables
         if font is not None:
             self._font = font
@@ -197,6 +199,8 @@ class Label(LabelBase):
                 self._bitmap.fill(0)
 
             # Place the text into the Bitmap
+            print("about to call _place_text()")
+            print(text)
             self._place_text(
                 self._bitmap,
                 text if self._label_direction != "RTL" else "".join(reversed(text)),
@@ -204,6 +208,7 @@ class Label(LabelBase):
                 self._padding_left - x_offset,
                 self._padding_top + y_offset,
             )
+            print("after _place_text")
 
             if self._base_alignment:
                 label_position_yoffset = 0
@@ -360,6 +365,8 @@ class Label(LabelBase):
         # when copying glyph bitmaps (this is important for slanted text
         # where rectangular glyph boxes overlap)
     ) -> Tuple[int, int, int, int]:
+        print(f"inside _place_text() text: {text}")
+
         # pylint: disable=too-many-arguments, too-many-locals
 
         # placeText - Writes text into a bitmap at the specified location.
@@ -368,14 +375,15 @@ class Label(LabelBase):
 
         x_start = xposition  # starting x position (left margin)
         y_start = yposition
+        print(f"x: {x_start}, y: {y_start}")
 
         left = None
         right = x_start
         top = bottom = y_start
         line_spacing = self._line_spacing
-
+        print(f"left: {left}, right: {right}, top: {top}, bottom: {bottom}, line_spacing: {line_spacing}")
         for char in text:
-
+            print(f"working on: {char}")
             if char == "\n":  # newline
                 xposition = x_start  # reset to left column
                 yposition = yposition + self._line_spacing_ypixels(
@@ -389,6 +397,8 @@ class Label(LabelBase):
                 if my_glyph is None:  # Error checking: no glyph found
                     print("Glyph not found: {}".format(repr(char)))
                 else:
+                    print(f"glyph was not none: {my_glyph}")
+                    print(dir(my_glyph))
                     if xposition == x_start:
                         if left is None:
                             left = my_glyph.dx
@@ -431,6 +441,12 @@ class Label(LabelBase):
                             )
                         )
 
+
+                    print("about to call _blit")
+                    print(f"xpos: {xposition}, glyph.dx: {my_glyph.dx}, y_blit_target: {y_blit_target}, "
+                          f"x1: {glyph_offset_x} y1: {y_clip}, x2: {glyph_offset_x + my_glyph.width}, "
+                          f"y2: {my_glyph.height} skip index: {skip_index}")
+
                     self._blit(
                         bitmap,
                         xposition + my_glyph.dx,
@@ -462,8 +478,9 @@ class Label(LabelBase):
         # (for example: the background color of a glyph)
     ) -> None:
         # pylint: disable=no-self-use, too-many-arguments
-
+        print("inside _blit()")
         if hasattr(bitmap, "blit"):  # if bitmap has a built-in blit function, call it
+            print("bitmap did have blit")
             # this function should perform its own input checks
             bitmap.blit(
                 x,
@@ -477,7 +494,7 @@ class Label(LabelBase):
             )
 
         else:  # perform pixel by pixel copy of the bitmap
-
+            print("bitmap did not have blit")
             # Perform input checks
 
             if x_2 is None:
