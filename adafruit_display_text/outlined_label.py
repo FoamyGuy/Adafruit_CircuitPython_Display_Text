@@ -110,11 +110,18 @@ class OutlinedLabel(bitmap_label.Label):
                 for x in range(self.bitmap.width):
                     if self.bitmap[x, y] == 1:
                         try:
-                            bitmaptools.blit(
-                                self.bitmap,
-                                self._stamp_source,
+                            # bitmaptools.blit(
+                            #     self.bitmap,
+                            #     self._stamp_source,
+                            #     x - self._outline_size,
+                            #     y - self._outline_size,
+                            #     skip_dest_index=1,
+                            # )
+
+                            self.bitmap.blit(
                                 x - self._outline_size,
                                 y - self._outline_size,
+                                self._stamp_source,
                                 skip_dest_index=1,
                             )
                         except ValueError as value_error:
