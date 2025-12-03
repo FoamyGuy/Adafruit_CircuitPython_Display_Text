@@ -22,7 +22,7 @@ Implementation Notes
 
 """
 
-__version__ = "0.0.0+auto.0"
+__version__ = "3.3.3"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_Display_Text.git"
 
 
@@ -112,7 +112,9 @@ class Label(LabelBase):
             y_box_offset = self._bounding_box[1]
 
         else:  # draw a "loose" bounding box to include any ascenders/descenders.
-            ascent, descent = self._ascent, self._descent
+            #ascent, descent = self._ascent, self._descent
+            bbox = self.font.get_bounding_box()
+            ascent, descent = bbox[1], -bbox[3]
 
             if self._label_direction in {"DWR", "UPR"}:
                 box_height = self._bounding_box[3] + self._padding_right + self._padding_left
@@ -135,6 +137,11 @@ class Label(LabelBase):
             else:
                 box_width = self._bounding_box[2] + self._padding_left + self._padding_right
                 x_box_offset = -self._padding_left
+                print(f"Label ascent: {ascent} descent: {descent}")
+                print(f"Lines: {lines}")
+                print(f"_height: {self._height}")
+                print(f"_line_spacing: {self._line_spacing}")
+                print(f"_padding_top: {self._padding_top} padding_bottom: {self._padding_bottom}")
                 box_height = (
                     (ascent + descent)
                     + int((lines - 1) * self._height * self._line_spacing)
@@ -151,11 +158,13 @@ class Label(LabelBase):
             else:
                 padding_to_use = self._padding_top
 
+            print("y_offset", y_offset)
+            print("padding_to_use", padding_to_use)
             if self._base_alignment:
                 y_box_offset = -ascent - padding_to_use
             else:
                 y_box_offset = -ascent + y_offset - padding_to_use
-
+            print()
         box_width = max(0, box_width)  # remove any negative values
         box_height = max(0, box_height)  # remove any negative values
 
@@ -172,6 +181,7 @@ class Label(LabelBase):
             movx = left + x_box_offset
             movy = y_box_offset
 
+        print(f"Label box width,height: {box_width}, {box_height}")
         background_bitmap = Bitmap(box_width, box_height, 1)
         tile_grid = TileGrid(
             background_bitmap,
@@ -260,9 +270,20 @@ class Label(LabelBase):
             position_x, position_y = 0, 0
 
             if self._label_direction in {"LTR", "RTL"}:
+                print(f"top: {top}")
+                print(f"bottom: {bottom}")
+                print(f"y: {y}")
+                print(f"-glpyh.height: {-glyph.height}")
+                print(f"glpyh.dy: {glyph.dy}")
+                print(f"y_offset: {self._y_offset}")
                 bottom = max(bottom, y - glyph.dy + self._y_offset)
                 if y == 0:  # first line, find the Ascender height
+
+
                     top = min(top, -glyph.height - glyph.dy + self._y_offset)
+                    # top = self._local_group[0].y + self._padding_top
+
+                    print(f"top: {top}")
                 position_y = y - glyph.height - glyph.dy + self._y_offset
 
                 if self._label_direction == "LTR":
@@ -382,12 +403,28 @@ class Label(LabelBase):
         if self._label_direction == "DWR":
             self._bounding_box = (left, top, right, bottom - top)
         if self._label_direction == "LTR":
-            self._bounding_box = (left, top, right - left, bottom - top)
+            #top = self._local_group[0].y + self._padding_top
+            print(f"font bounding_box(): {self.font.get_bounding_box()}")
+            bbox = self.font.get_bounding_box()
+            ascent, descent = bbox[1], -bbox[3]
+            lines = self._text.rstrip("\n").count("\n") + 1
+            box_height = (
+                    (ascent + descent)
+                    + int((lines - 1) * self._height * self._line_spacing)
+                    + self._padding_top
+                    + self._padding_bottom
+            )
+            top = -self.font.get_bounding_box()[1]
+
+            # bottom = -4
+            print(f"top: {top} bottom: {bottom}")
+            self._bounding_box = (left, top, right - left, box_height)
 
         self._text = new_text
 
         if self._background_color is not None:
             self._set_background_color(self._background_color)
+
 
     def _reset_text(self, new_text: str) -> None:
         current_anchored_position = self.anchored_position

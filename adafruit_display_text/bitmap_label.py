@@ -23,7 +23,7 @@ Implementation Notes
 
 """
 
-__version__ = "0.0.0+auto.0"
+__version__ = "3.3.3"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_Display_Text.git"
 
 import displayio
@@ -179,6 +179,9 @@ class Label(LabelBase):
                 self._font,
             )  # calculate the box size for a tight and loose backgrounds
 
+            print(f"bmplbl loose_box_y: {loose_box_y}")
+            print(f"bmplbl loose_y_offset {loose_y_offset}")
+
             if self._background_tight:
                 box_y = tight_box_y
                 y_offset = tight_y_offset
@@ -190,11 +193,13 @@ class Label(LabelBase):
             else:  # calculate the box size for a loose background
                 box_y = loose_box_y
                 y_offset = loose_y_offset
-
+            print(f"bmplbl _padding_top: {self._padding_top} padding_bottom: {self._padding_bottom}")
             # Calculate the background size including padding
             tight_box_x = box_x
             box_x = box_x + self._padding_left + self._padding_right
             box_y = box_y + self._padding_top + self._padding_bottom
+
+            print(f"BitmapLabel width,height: {box_x}, {box_y}")
 
             # Create the Bitmap unless it can be reused
             new_bitmap = None
@@ -205,18 +210,23 @@ class Label(LabelBase):
                 self._bitmap.fill(0)
 
             # Place the text into the Bitmap
-            self._place_text(
+            place_text_result = self._place_text(
                 self._bitmap,
                 text if self._label_direction != "RTL" else "".join(reversed(text)),
                 self._font,
                 self._padding_left - x_offset,
                 self._padding_top + y_offset,
             )
+            print(f"place_text_result: {place_text_result}")
 
+            print(f"base_alignment: {self._base_alignment}")
             if self._base_alignment:
                 label_position_yoffset = 0
             else:
                 label_position_yoffset = self._ascent // 2
+
+            print(f"label_position_yoffset: {label_position_yoffset}")
+            print(f"y_offset: {y_offset}")
 
             # Create the TileGrid if not created bitmap unchanged
             if self._tilegrid is None or new_bitmap:
@@ -258,11 +268,12 @@ class Label(LabelBase):
                     tight_box_x,
                 )
             else:
+
                 self._bounding_box = (
                     self._tilegrid.x + self._padding_left,
                     self._tilegrid.y + self._padding_top,
-                    tight_box_x,
-                    tight_box_y,
+                    box_x,
+                    box_y,
                 )
 
         if (
@@ -284,6 +295,7 @@ class Label(LabelBase):
         self, text: str, font: FontProtocol
     ) -> Tuple[int, int, int, int, int, int]:
         bbox = font.get_bounding_box()
+        print(f"bbox: {bbox}")
         if len(bbox) == 4:
             ascender_max, descender_max = bbox[1], -bbox[3]
         else:
@@ -342,6 +354,7 @@ class Label(LabelBase):
         final_box_height_tight = bottom - top
         final_y_offset_tight = -top + y_offset_tight
 
+        print(f"ascender_max: {ascender_max} descender_max: {descender_max}")
         final_box_height_loose = (lines - 1) * self._line_spacing_ypixels(font, line_spacing) + (
             ascender_max + descender_max
         )
